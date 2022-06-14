@@ -106,9 +106,11 @@ The observations for the United States are a sum of all other observations of th
 ```{r}
 US <- subset(Data, Location == "United States")
 US
+US$Location <- as.factor(US$Location)
 
 States <- subset(Data, Location != "United States")
 States
+States$Location <- as.factor(States$Location)
 ```
 
 # Exploratory Data Analysis
@@ -137,6 +139,7 @@ ggplot(Spread, aes(Contagious, New_Cases), scale="exponential") + geom_point() +
 ```
 ```{r}
 States$Location <- as.numeric(States$Location)
+
 US %>%
   select(Days, Cases, New_Cases, Contagious, Deaths, New_Deaths, Distributed, Administered_Pct, Recip_Administered_Pct,	Administered_Dose1_Pop_Pct, Series_Complete_Pop_Pct, Additional_Doses_Vax_Pct,	POPESTIMATE2020) %>% 
   cor() %>% 
@@ -181,9 +184,9 @@ The goal in this project will be to build a model from the States data set that 
 ```{r}
 set.seed(91362)
 
-Data_split <- initial_split(Data, prop = 0.7, strata = Location)
-Data_train <- training(Data_split)
-Data_test <- testing(Data_split)
+States0_split <- initial_split(States, prop = 0.7, strata = Location)
+States0_train <- training(States0_split)
+States0_test <- testing(States0_split)
 
 US1_split <- initial_split(US, prop = 0.7, strata = Deaths)
 US1_train <- training(US1_split)
@@ -204,7 +207,7 @@ States2_test <- testing(States2_split)
 ```{r}
 set.seed(345)
 
-Data_folds <- vfold_cv(Data_train, strata = Location, v = 5)
+States0_folds <- vfold_cv(States0_train, strata = Location, v = 5)
 US1_folds <- vfold_cv(US1_train, strata = Deaths, v = 5)
 US2_folds <- vfold_cv(US2_train, strata = New_Deaths, v = 5)
 States1_folds <- vfold_cv(States1_train, strata = Deaths, v = 5)
@@ -212,26 +215,27 @@ States2_folds <- vfold_cv(States2_train, strata = New_Deaths, v = 5)
 ```
 
 ```{r}
-Data_train_recipe <- recipe(Location ~ Days + Cases + New_Cases + Deaths + New_Deaths + Contagious + Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct, data = Data_train)
+States0_train_recipe <- recipe(Location ~ Days + Cases + New_Cases + Deaths + New_Deaths + Contagious + Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = States0_train)
 
 US1_train_recipe <- recipe(Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = US1_train)
 
 US2_train_recipe <- recipe(New_Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = US2_train)
 
-States1_train_recipe <- recipe(Deaths ~ Location + Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States1_train)
+States1_train_recipe <- recipe(Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States1_train)
 
-States2_train_recipe <- recipe(New_Deaths ~ Location + Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States2_train)
+States2_train_recipe <- recipe(New_Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States2_train)
 ```
 ```{r}
+States0_train$Location <- as.factor(States0_train$Location)
 log_reg <- logistic_reg() %>% 
   set_engine("glm") %>% 
   set_mode("classification")
 
 log_wkflow <- workflow() %>% 
   add_model(log_reg) %>% 
-  add_recipe(Data_train_recipe)
+  add_recipe(States0_train_recipe)
 
-log_fit <- fit(log_wkflow, Data_train)
+log_fit <- fit(log_wkflow, States0_train)
 log_fit
 
 lda_mod <- discrim_linear() %>% 
@@ -240,17 +244,17 @@ lda_mod <- discrim_linear() %>%
 
 lda_wkflow <- workflow() %>% 
   add_model(lda_mod) %>% 
-  add_recipe(Data_train_recipe)
+  add_recipe(States0_train_recipe)
 
-lda_fit <- fit(lda_wkflow, Data_train)
+lda_fit <- fit(lda_wkflow, States0_train)
 lda_fit
 ```
 ```{r}
-log_acc <- predict(log_fit, new_data = Data_train, type = "class") %>% 
-  bind_cols(Data_train %>% select(Location)) %>% 
+log_acc <- predict(log_fit, new_data = States0_train, type = "class") %>% 
+  bind_cols(States0_train %>% select(Location)) %>% 
   accuracy(truth = Location, estimate = .pred_class)
-lda_acc <- predict(lda_fit, new_data = Data_train, type = "class") %>% 
-  bind_cols(Data_train %>% select(Location)) %>% 
+lda_acc <- predict(lda_fit, new_data = States0_train, type = "class") %>% 
+  bind_cols(States0_train %>% select(Location)) %>% 
   accuracy(truth = Location, estimate = .pred_class)
 
 results <- bind_rows(log_acc, lda_acc) %>% 
@@ -260,14 +264,8 @@ results <- bind_rows(log_acc, lda_acc) %>%
 
 results
 ```
-```{r}
-lda_test <- fit(lda_wkflow, Data_test)
-predict(lda_test, new_data = Data_test, type = "class") %>% 
-  bind_cols(Data_test %>% select(Location)) %>% 
-  accuracy(truth = Location, estimate = .pred_class)
-```
 Considering that there are 47,025 observations in the data set as well as 57 possible locations that are being predicted, an accuracy rate of nearly 29% is not too terrible. Nonetheless, the model.
-```{r}
+```{r eval=FALSE, include=TRUE}
 tree_spec <- decision_tree() %>%
   set_engine("rpart")
 
@@ -276,13 +274,13 @@ class_tree_spec <- tree_spec %>%
 
 class_tree_wf <- workflow() %>%
   add_model(class_tree_spec %>% set_args(cost_complexity = tune())) %>%
-  add_recipe(Data_train_recipe)
+  add_recipe(States0_train_recipe)
 
 param_grid <-grid_regular(cost_complexity(range = c(-3, -1)), levels = 10)
 
 tune_res <- tune_grid(
   class_tree_wf, 
-  resamples = Data_folds, 
+  resamples = States0_folds, 
   grid = param_grid, 
   metrics = metric_set(roc_auc),
   control = control_grid(verbose = TRUE)
@@ -291,17 +289,45 @@ tune_res <- tune_grid(
 tune.res <- autoplot(tune_res)
 tune.res
 ```
-```{r}
+```{r eval=FALSE, include=TRUE}
 complexity <- arrange(collect_metrics(tune_res), desc(mean))
 best_complexity <- complexity[1,]
 best_complexity
 
 class_tree_final <- finalize_workflow(class_tree_wf, best_complexity)
 
-class_tree_final_fit <- fit(class_tree_final, data = Data_train)
+class_tree_final_fit <- fit(class_tree_final, data = States0_train)
 
-class_tree_final_fit %>%
-  extract_fit_engine() %>%
-  rpart.plot()
+fit <- rpart(Location ~ States0_train_recipe, class_tree_final)
+
+fit1 <- prune(fit, cp = 0.001)
+plot()
 ```
+```{r}
+rec_poly <- States2_train_recipe %>%
+  step_poly(Days, degree = 4)
+
+lm_spec <- linear_reg() %>%
+  set_mode("regression") %>%
+  set_engine("lm")
+
+poly_wf <- workflow() %>%
+  add_model(lm_spec) %>%
+  add_recipe(rec_poly)
+
+poly_fit <- fit(poly_wf, data = US)
+tidy(poly_fit)
+```
+While almost none of the p-values indicate any significance, this does tell me that the predictor variables that have `NA` for everything are not of any use within my recipe. It also reveals that `Cases` has no significance at all. Thus, I will now change all of my regression recipes to account for this.
+```{r}
+US1_train_recipe <- recipe(Deaths ~ Days + New_Cases + Contagious +  Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = US1_train)
+
+US2_train_recipe <- recipe(New_Deaths ~ Days + New_Cases + Contagious +  Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = US2_train)
+
+States1_train_recipe <- recipe(Deaths ~ Days + New_Cases + Contagious +  Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = States1_train)
+
+States2_train_recipe <- recipe(New_Deaths ~ Days + New_Cases + Contagious +  Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = States1_train)
+```
+Now that I have readjusted my recipes, let's see if they have a significant change on the previous results.
+
 
