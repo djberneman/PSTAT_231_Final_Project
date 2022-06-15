@@ -7,6 +7,7 @@ output:
       toc: true
       toc_float: true
       toc_depth: '3'
+      code_folding: show
       keep_md: true
 ---
 ```{r setup, include=FALSE}
@@ -30,31 +31,18 @@ In mid-December of 2020, the first vaccines were made available to a limited amo
 
 ## Why might this model be useful.
 
-By comparing trends across individual states and the nation as a whole, it is possible that we could find commonalities between states with higher than average cases and deaths. In addition this could also help us identify which of the factors are most significant to the model and therefore, the pandemic. It could also reveal in what ways certain states fail in the implementation of vaccinations. Finally, it could reveal which age subset of the population has the most influence on the spread of the virus.
+By comparing trends across individual states and the nation as a whole, it is possible that we could find commonalities between states with higher than average cases and deaths. In addition this could also help us identify which of the factors are most significant to the model and therefore, the pandemic. It could also reveal in what ways certain states fail in the implementation of vaccinations.
 
-## Data and Packages
+## Packages
 
-This project uses a combination of two data sets. Both data sets record the historical data of the states and territories of the United States. 
-
-The first set of data is from the [nytimes/covid-19-data]("https://github.com/nytimes/covid-19-data"), which is an ongoing repository of data on coronavirus cases and deaths in the U.S. 
-
-The second set of data is from the 
-[COVID-19 Vaccinations in the United States, Jurisdiction](https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc), which covers overall US COVID-19 vaccine deliveries and administration data at national and jurisdiction level.
-
-Here are a few examples of the many variables contained within the combined data set:
-
-  - `Date` : Date data are reported on CDC COVID Data Tracker
-  - `Location` : Jurisdiction (State/Territory/Federal Entity)
-  - `Cases` : The cumulative amount of cases recorded in the specified state
-  - `Deaths` : The cumulative amount of deaths recorded in the specified state
-  
-Note: The complete codebook can be found in Appendix I
-  
-```{r include=FALSE}
+The following packages will be used in a variety of methods to learn more about the data and construct the most accurate model possible.
+```{r message=FALSE}
 # Load packages
 library(corrplot)
 library(corrr)
 library(discrim)
+library(dplyr)
+library(forcats)
 library(ggplot2)
 library(gridExtra)
 library(ISLR)
@@ -71,33 +59,69 @@ library(tune)
 library(vip)
 library(xgboost)
 ```
+
+## Data Sets 
+  
+This project uses a combination of four data sets containing a multitude of relevant variables the will be used as the predictors in the model that will be created.
+  
+The first two data sets record the historical data for COVID-19 of each state and territory within the United States while the last two data sets are estimations of each state and territory population from 2020. 
+
+The first set of data was found at the New York Times ongoing repository of data on COVID-19 cases and deaths in the United States.
+The second set of data was found at the CDC (Center for Disease Control and Prevention), and covers the overall US COVID-19 vaccine distribution and administration data at a national and jurisdiction level. Finally, the third and fourth sets of data are from the United States Census Bureau, the nation’s leading provider of quality data about its people and economy.
+
+All of the data sets can be found in the following links:
+  - [nytimes/covid-19-data]("https://github.com/nytimes/covid-19-data")
+  - [COVID-19 Vaccinations in the United States, Jurisdiction]("https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc")
+  - [2020 Population of U.S. Island Areas]("https://www.census.gov/library/stories/2021/10/first-2020-census-united-states-island-areas-data-released-today.html#:~:text=The%20combined%20population%20of%20the%20territories%20of%20American,are%20located%20in%20the%20Pacific%20and%20the%20Caribbean.?adlt=strict&toWww=1&redig=E754666D7D8F4F3287C3F2684EE5A8D1")
+  - [Resident Population for the 50 states, the District of Columbia, and Puerto Rico: 2020 Census]("https://www2.census.gov/programs-surveys/decennial/2020/data/apportionment/apportionment-2020-table02.pdf#:~:text=RESIDENT%20POPULATION%20%28APRIL%201%2C%202020%29%20Alabama,5%2C024%2C279%20Alaska%20733%2C391%20Arizona%207%2C151%2C502%20Arkansas%203%2C011%2C524?adlt=strict&toWww=1&redig=2BA221E2379945519A6B89E8DA5C31BA")
+
+  Here are a few examples of the many variables contained within the final combined data set:
+  - `Date` : Date that data is reported on the CDC COVID Data Tracker
+  - `Location` : Jurisdiction (State/Territory/Federal Entity) that data is taken from
+  - `Cases` : The cumulative amount of cases recorded
+  - `Deaths` : The cumulative amount of deaths recorded
+Note: The complete codebook can be found in Appendix I
+
+## Data Cleaning and Modifications
+
+Most of the data cleaning was done within Microsoft Excel due to the relative ease that it allows users to modify data. 
+
+Beginning with the first data set, I modified it to only contain the necessary variables that will be needed and organized it in ascending order based on `Location` first and `Date` second. I also decided to add a few new variables to the data set.
+  
+![*Data Set 1*](Order_Cases.jpg){width="5000"}
+I then created the variables, `Days`, `New_Cases`, `Contagious`, and `New_Deaths`.
+  
+![*Days*](Days.jpg){width="200"}
+
+![*New_Cases*](New_Cases.jpg){width="1500"}
+
+![*New_Deaths*](New_Deaths.jpg){width="1500"}
+
+While the other new variables are self explanatory, `Contagious` will be created to account for the amount of people that are capable of spreading the virus at any one time based on a 12 day average period that people can transmit the virus to others.
+![*Contagious*](Contagious.jpg){width="1500"}
+
+Moving on to the second set of data, I got rid of over 50 variables and sorted the data the same way as the first data set.
+![*Vaccination 1*](Order_vaccine1.jpg){width="1500"}
+I also had to change all of the values in `Location` to their full names instead of their abbreviations.
+![*Vaccination 2*](Order_vaccine2.jpg){width="1500"}
+![*Vaccination 3*](Order_vaccine3.jpg){width="1500"}
+I finally merged the two data sets into one.
+
+![*Merge*](Merge.jpg){width="1500"}
+Seeing that I did not need so many variables, so I got rid of the ones that I felt were not necessary.
+![*Merge*](Remove_Columns.jpg){width="1500"}
+The final step was to merge this with the combined third and fourth data set.
+![*Final_Merge*](Final_Merge.jpg){width="800"}
+Then, I realized that every variable that was a percentage was rounded to the nearest percent, so I recalculated every percentage to three decimal places with the following code: 
+![*Recalculations*](Pct_recalc.jpg){width="175"}
 ```{r include=FALSE}
 # read in data
 Data <- read_xlsx("Final_Data.xlsx")
+# change Location to be a factor
 Data$Location <- as.factor(Data$Location)
 ```
-
-# Data Cleaning and Modifications
-
-Most of the data cleaning was done in excel due to the data sets being too large to properly manage and clean within RStudio. 
-
-While neither data set had any major issues, they were arranged by their most recent observations. 
-
-To make them more comprehensible, I sorted them the following ways:
-
-  1.) Ascending Ordered the `Location` alphabetically
-  2.) Ascending ordered the `Date` by least recent to most recent
-  
-I then removed any columns that I did not believe I would need. This included 1 column from the first set of data and 58 columns from the second set of data. 
-
-I then created a column called `Days Since 1st Case` to denote the time that had passed since the first reported case of the coronavirus in the US.
-
-In order to merge both data sets, I had to make sure that both started and ended on the same date for each location. For some locations, there are a month or two of more observations since they have the earliest cases. I then had to add the value of 0 to 43 of the columns for each observation that took place before the distribution of the vaccine. After making sure that the only values in `location` were the 50 states, 5 territories, D.C., and the United States as a whole, I finally merged both sets of data together.
-
-After that, I decided to create 3 more new variables. To see the differences in deaths and cases between individual days, I created `New_Cases` and `New_Deaths`. While it was useful to have the cumulative historic data for `Cases` and `Deaths`, it only reveals the total amount of people who have contracted the virus or died from it. Additionally, because people are contagious an average of 12 days as stated above in "What is COVID-19?", I believed that it would be sensible to have a new variable, `Contagious`, be the sum of the current day's and previous 11 days' observations of `New_Cases`.
-
 ```{r}
-# The first 1000 observations from the data set
+# Here is a look at the data set
 Data
 ```
 ## Data Grouping
@@ -106,7 +130,6 @@ The observations for the United States are a sum of all other observations of th
 ```{r}
 US <- subset(Data, Location == "United States")
 US
-US$Location <- as.factor(US$Location)
 
 States <- subset(Data, Location != "United States")
 States
@@ -114,46 +137,19 @@ States$Location <- as.factor(States$Location)
 ```
 
 # Exploratory Data Analysis
+
+Now, let's take a look at the data and its trends.
+  
+## Cumulative Death Toll
 ```{r}
 Current = subset(States, Days == 870)[c("Location", "Deaths")]
-Current
 Current <- arrange(Current, desc(Deaths))
+Current
 
 head(Current, 15) %>% 
   ggplot(aes(Location, Deaths)) + geom_col() + coord_flip() + labs(title  = "Total Deaths by Location", x = "Location", y = "Deaths") + geom_text(aes(label = round(Deaths, 1)))
 ```
-```{r}
-Toll = subset(US, New_Cases >= 0)[c("Date", "New_Cases")]
-
-ggplot(Toll, aes(Date, New_Cases)) + geom_line() + labs(title  = "New Cases Over Time", x = "Date", y = "New_cases")
-```
-```{r}
-Fatalities = subset(US, New_Deaths >= 0)[c("Date", "New_Deaths")]
-
-ggplot(Fatalities, aes(Date, New_Deaths)) + geom_line() + labs(title  = "Frequency of Lives Lost", x = "Date", y = "New_Deaths")
-```
-```{r}
-Spread = subset(US, New_Cases >= 0)[c("Contagious", "New_Cases")]
-
-ggplot(Spread, aes(Contagious, New_Cases), scale="exponential") + geom_point() + labs(title  = "Spread of COVID-19", x = "Contagious", y = "New_Cases")
-```
-```{r}
-States$Location <- as.numeric(States$Location)
-
-US %>%
-  select(Days, Cases, New_Cases, Contagious, Deaths, New_Deaths, Distributed, Administered_Pct, Recip_Administered_Pct,	Administered_Dose1_Pop_Pct, Series_Complete_Pop_Pct, Additional_Doses_Vax_Pct,	POPESTIMATE2020) %>% 
-  cor() %>% 
-  corrplot(type = 'lower', diag = TRUE, method = 'number', tl.srt = 45, tl.offset = 0.5, tl.cex = 0.75, number.cex= 0.57) 
-
-States %>%
-  select(Days, Location, Cases, New_Cases, Contagious, Deaths, New_Deaths, Distributed, Administered_Pct, Recip_Administered_Pct,	Administered_Dose1_Pop_Pct, Series_Complete_Pop_Pct, Additional_Doses_Vax_Pct,	POPESTIMATE2020) %>% 
-  cor() %>% 
-  corrplot(type = 'lower', diag = TRUE, method = 'number', tl.srt = 45, tl.offset = 0.5, tl.cex = 0.75, number.cex= 0.57)
-```
-The results for the States correlation variables and for the US correlation variables reveals that there are major differences between what is revealed by each correlation plot. As can be seen within the lower right triangle in the US plot, almost all variables that are associated with vaccinations have high to extremely high correlations. When comparing those same correlation factors in the States plot, it is clear to see that the summation of all `Location` variables in the US data set skews the initial results of the State data set. This can be evidenced by the fact that there are 14 correlation factors in the US plot that are 0.99 or above. This would mean each variable of those correlation factors would increase and decrease at nearly the exact same rate. I find it very hard to believe that `Dist_Per_100K` and `Admin_Per_100K` would have the same rate of change because that would imply that almost no vaccines that are distributed around the country ever expire or go to waste. I also know for a fact that there were many administration centers that were offering the vaccine to people below the age of 65 at the time when those vaccines were reserved for them since they are considered the most vulnerable. The centers were being given more vaccines than they had people they were meant to administer them to. And the trouble with expired vaccines is that unlike food past its expiration date, vaccines past their expiration date may still leave people vulnerable to the virus.
-
-In addition, the other part of the plots reveal that correlation factors involved with cases and deaths have stronger significance in the States data set. The correlation factors in the US variables make it look like the distribution and administration of the vaccine had very little effect on the amount of people who got infected and the amount who died. Since that would imply that taking a vaccine does not noticeably decreases your chancres of catching the virus, it would go against the scientific fact that vaccines are directly responsible for the prevention of viruses and diseases spreading.
-
+This death toll highlights how deadly a virus can be in the 21st century with our current world population. If you know which states have the largest populations, you will notice that most of them are featured in the above bar graph. It does not, however, account for the total populations of each state. Therefore, to get a better perspective of which states lost the most people compared to their respective populations, we will look at the percentage of deaths across all states and territories. 
 ```{r}
 set <- subset(Data, Days == 870)
 
@@ -166,37 +162,80 @@ Set1 <- Set[order(-Set$Pct_Death),]
 Set1a <- Set1[0:28,]
 Set1b <- Set1[29:57,]
 
-Set1a
+Set1a %>% 
+  mutate(Location = fct_reorder(Location, Pct_Death)) %>%
+  ggplot(aes(x = Location, y = Pct_Death)) + geom_col() + coord_flip()
 
-plot1 <- ggplot(Set1a, aes(x = Pct_Death, y = Location)) + geom_col() + xlab("Population Death %") + ylab("Location")
-plot1
-
-plot2 <- ggplot(Set1b, aes(x = Pct_Death, y = Location)) + geom_col() + xlab("Population Death %") + ylab("Location")
-plot2
+Set1b %>% 
+  mutate(Location = fct_reorder(Location, Pct_Death)) %>%
+  ggplot(aes(x = Location, y = Pct_Death)) + geom_col() + coord_flip()
 ```
+Observing the percent of people who have died in each location, you will notice the sad fact that over half of the locations have a higher than average rate of death compared to the nation as a whole.
+
+## Cases and Deaths
+
+The amount of cases rose exponentially at the start of the pandemic. Once the vaccine was created, it would make more sense that the number of new cases would rise at a smaller rate than before, but that is not what we can see here.
+
+```{r}
+Toll = subset(US, New_Cases >= 0)[c("Date", "New_Cases")]
+
+ggplot(Toll, aes(Date, New_Cases)) + geom_line() + labs(title  = "New Cases Over Time", x = "Date", y = "New_cases")
+```
+It appears that even though the vaccine has been around for more than 1.5 years, the rate of new cases has not become consistently diminished. Instead, it seems like the amount of new cases has a downward trend for the first half of the year before rapidly spiking around the holidays. This would suggest that even with a majority of people being vaccinated, loosening quarantine procedures around the country has been a bad idea. The evidence for this claim can be seen in the amount of new deaths that this has resulted in.
+```{r}
+Fatalities = subset(US, New_Deaths >= 0)[c("Date", "New_Deaths")]
+
+ggplot(Fatalities, aes(Date, New_Deaths)) + geom_line() + labs(title  = "Frequency of Lives Lost", x = "Date", y = "New_Deaths")
+```
+It should be noticeable how both line plots seem to have similar trends after the implementation of the vaccine became widely available in the beginning of 2021.
+
+## Spread of COVID-19
+
+Next, we will see the historical rates of people that die based on new cases, people who die based on people who are contagious, and people who contact the virus based on people who are contagious. With the observation, we will be able to verify the claims made previously as well as the trends that have been shown.
+```{r}
+Spread1 = subset(US, New_Cases >= 0)[c("Contagious", "New_Cases", "Date")]
+
+ggplot(Spread1, aes(Date, New_Cases / Contagious)) + geom_point() + labs(title  = "Spread of COVID-19", x = "Time", y = "New_Cases / Contagious") + geom_smooth() + ylim(0.001, 0.2)
+```
+The scatter plot seem rather consistent until somewhere around May 2021. At that point in time, the observational points start to widely vary and continues to do so through the present day. This is around the exact same time when the vaccine became available for all people over the age of 18. Up until that point, all states were at the same point in regards to quarantining. Past this point, there was a divide in the nation between people who were accepting of the vaccine and those who refused to get it, those who still mandated masks and those who saw no need for masks, and those who were for or against loosening quarantine restrictions and social distancing. These opinions tended to be centered around entire regions of the country. This among other factors may be the cause for the larger variability past the introduction of the vaccine.
+
+```{r}
+Spread2 = subset(US, New_Cases >= 0)[c("Contagious", "New_Deaths", "Date")]
+
+ggplot(Spread2, aes(Date, New_Deaths / Contagious)) + geom_point() + labs(title  = "New Deaths per People Contagious", x = "Time", y = "New_Death / Contagious") + geom_smooth() + ylim(0.0001, 0.008)
+```
+Here, we can observe that the spikes in the death rate tend to happen periodically every few months. Despite this, it does not look like the implementation of the vaccine lessened the death rate as much as social distancing and quarantining did. At the same time, the vaccine has managed to keep the rate consistently lower than at the beginning of the pandemic even with social distancing restrictions being largely lifted around the country.
+
+```{r}
+Spread3 = subset(US, New_Cases >= 0)[c("New_Deaths", "New_Cases", "Date")]
+
+ggplot(Spread3, aes(Date, New_Deaths / New_Cases)) + geom_point() + labs(title  = "Mortality Rate", x = "Time", y = "New_Deaths / New_Cases") + geom_smooth() + ylim(0.0001, 0.125)
+```
+Based on the repeated increases and decreases in the mortality rate, it does not seem to have been affected that much by the implementation of the vaccine. It appears that the mortality rate of those who contract the virus is the same before and after the distribution of the vaccine. This makes some sense because a vaccine is not the same thing as a cure. While a vaccine is used to prevent people from catching a virus in the first place, it does not guarantee survival if the virus makes it past the vaccine. Please note that this graphical representation does not represent the percent of new cases who end up dying, but rather the amount of people that have died on a certain day compared to the amount of people who contracted the virus that same day.
+
+## Variable Correlation
+
+```{r}
+States$Location <- as.numeric(States$Location)
+
+States %>%
+  select(Days, Location, Cases, New_Cases, Contagious, Deaths, New_Deaths, Distributed, Administered_Pct, Recip_Administered_Pct,	Administered_Dose1_Pop_Pct, Series_Complete_Pop_Pct, Additional_Doses_Vax_Pct,	POPESTIMATE2020) %>% 
+  cor() %>% 
+  corrplot(type = 'lower', diag = TRUE, method = 'number', tl.srt = 45, tl.offset = 0.5, tl.cex = 0.75, number.cex= 0.56)
+```
+The strong positive correlation factors for days with the percentages of the various cases of administered vaccines makes sense because the vaccine took time to create as well as time to test before being allowed to be administered to each age group. The vaccination variables all appear to have strong positive correlation which is self explanatory once it is realized that each category of vaccination is specifically order since you cannot have a complete set of vaccinations without also having single vaccination and you cannot have additional doses without also having the complete set of vaccinations. Distributed and Deaths also have a stong positive correlation which can be expected since the government would want to administer the most vaccines to the locations that are hit the hardest by the virus. A few of the remaining correlation factors have a weak positive correlation with each other because being administered a vaccination has a direct effect on the chances of someone contracting the virus and possibly being killed by it. Surprisingly, Locatiion does not seem to have any correlation with any other variable, which I would have expected since each state is responsible for its own quarantine measures that they implement. It would have made sense because some states have been hit harder by the pandemic than others. 
+
 
 # Model Building
 
-The goal in this project will be to build a model from the States data set that most accurately predicts its own `Deaths` or `New_Deaths` and those of the US data set. Then, we will do the opposite and compare the results of both to see whether `States` or `US` more accurately predict both data sets.
+The goal in creating this model will be to most accurately predict the number of New_Deaths per day by using the States data set as a base. We will then see how well the model fits to the US data set. In addition, we will determine if a model can be created that accurately predicts the location that each observation comes from.
 
 ## Data Splitting
 
 ```{r}
 set.seed(91362)
 
-States0_split <- initial_split(States, prop = 0.7, strata = Location)
-States0_train <- training(States0_split)
-States0_test <- testing(States0_split)
-
-US1_split <- initial_split(US, prop = 0.7, strata = Deaths)
-US1_train <- training(US1_split)
-US1_test <- testing(US1_split)
-
-US2_split <- initial_split(US, prop = 0.7, strata = New_Deaths)
-US2_train <- training(US2_split)
-US2_test <- testing(US2_split)
-
-States1_split <- initial_split(States, prop = 0.7, strata = Deaths)
+States1_split <- initial_split(States, prop = 0.7, strata = Location)
 States1_train <- training(States1_split)
 States1_test <- testing(States1_split)
 
@@ -207,35 +246,28 @@ States2_test <- testing(States2_split)
 ```{r}
 set.seed(345)
 
-States0_folds <- vfold_cv(States0_train, strata = Location, v = 5)
-US1_folds <- vfold_cv(US1_train, strata = Deaths, v = 5)
-US2_folds <- vfold_cv(US2_train, strata = New_Deaths, v = 5)
-States1_folds <- vfold_cv(States1_train, strata = Deaths, v = 5)
+States1_folds <- vfold_cv(States1_train, strata = Location, v = 5)
 States2_folds <- vfold_cv(States2_train, strata = New_Deaths, v = 5)
 ```
-
+## Recipes
 ```{r}
-States0_train_recipe <- recipe(Location ~ Days + Cases + New_Cases + Deaths + New_Deaths + Contagious + Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = States0_train)
+States1_train$Location <- as.factor(States1_train$Location)
+States1_train_recipe <- recipe(Location ~ Days + Cases + New_Cases + Deaths + New_Deaths + Contagious + Distributed + Administered +	Recip_Administered + Administered_Dose1_Recip + Series_Complete_Yes + Additional_Doses, data = States1_train)
 
-US1_train_recipe <- recipe(Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = US1_train)
-
-US2_train_recipe <- recipe(New_Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = US2_train)
-
-States1_train_recipe <- recipe(Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States1_train)
-
-States2_train_recipe <- recipe(New_Deaths ~ Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States2_train)
+States2_train$Location <- as.factor(States2_train$Location)
+States2_train_recipe <- recipe(New_Deaths ~ Location + Days + Cases + New_Cases + Contagious +  Distributed + Administered + Administered_Pct +	Recip_Administered + Recip_Administered_Pct + Administered_Dose1_Recip + Administered_Dose1_Pop_Pct + Series_Complete_Yes + Series_Complete_Pop_Pct + Additional_Doses + Additional_Doses_Vax_Pct + POPESTIMATE2020, data = States2_train)
 ```
+## Log and LDA Testing
 ```{r}
-States0_train$Location <- as.factor(States0_train$Location)
 log_reg <- logistic_reg() %>% 
   set_engine("glm") %>% 
   set_mode("classification")
 
 log_wkflow <- workflow() %>% 
   add_model(log_reg) %>% 
-  add_recipe(States0_train_recipe)
+  add_recipe(States1_train_recipe)
 
-log_fit <- fit(log_wkflow, States0_train)
+log_fit <- fit(log_wkflow, States1_train)
 log_fit
 
 lda_mod <- discrim_linear() %>% 
@@ -244,17 +276,17 @@ lda_mod <- discrim_linear() %>%
 
 lda_wkflow <- workflow() %>% 
   add_model(lda_mod) %>% 
-  add_recipe(States0_train_recipe)
+  add_recipe(States1_train_recipe)
 
-lda_fit <- fit(lda_wkflow, States0_train)
+lda_fit <- fit(lda_wkflow, States1_train)
 lda_fit
 ```
 ```{r}
-log_acc <- predict(log_fit, new_data = States0_train, type = "class") %>% 
-  bind_cols(States0_train %>% select(Location)) %>% 
+log_acc <- predict(log_fit, new_data = States1_train, type = "class") %>% 
+  bind_cols(States1_train %>% select(Location)) %>% 
   accuracy(truth = Location, estimate = .pred_class)
-lda_acc <- predict(lda_fit, new_data = States0_train, type = "class") %>% 
-  bind_cols(States0_train %>% select(Location)) %>% 
+lda_acc <- predict(lda_fit, new_data = States1_train, type = "class") %>% 
+  bind_cols(States1_train %>% select(Location)) %>% 
   accuracy(truth = Location, estimate = .pred_class)
 
 results <- bind_rows(log_acc, lda_acc) %>% 
@@ -264,7 +296,8 @@ results <- bind_rows(log_acc, lda_acc) %>%
 
 results
 ```
-Considering that there are 47,025 observations in the data set as well as 57 possible locations that are being predicted, an accuracy rate of nearly 29% is not too terrible. Nonetheless, the model.
+Considering that there are 46,153 observations in the data set as well as 56 possible locations that are being predicted, an accuracy rate of nearly 39% is not too terrible. Nonetheless, the model will not consistently prove to be a reliable method to predict the location based on the observations given.
+
 ```{r eval=FALSE, include=TRUE}
 tree_spec <- decision_tree() %>%
   set_engine("rpart")
@@ -274,13 +307,13 @@ class_tree_spec <- tree_spec %>%
 
 class_tree_wf <- workflow() %>%
   add_model(class_tree_spec %>% set_args(cost_complexity = tune())) %>%
-  add_recipe(States0_train_recipe)
+  add_recipe(States1_train_recipe)
 
 param_grid <-grid_regular(cost_complexity(range = c(-3, -1)), levels = 10)
 
 tune_res <- tune_grid(
   class_tree_wf, 
-  resamples = States0_folds, 
+  resamples = States1_folds, 
   grid = param_grid, 
   metrics = metric_set(roc_auc),
   control = control_grid(verbose = TRUE)
