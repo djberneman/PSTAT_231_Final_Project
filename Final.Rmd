@@ -241,7 +241,7 @@ States %>%
   cor() %>% 
   corrplot(type = 'lower', diag = TRUE, method = 'number', tl.srt = 45, tl.offset = 0.5, tl.cex = 0.75, number.cex= 0.56)
 ```
-![*Variable Correlation Plot*]("ConfusionMatrix.jpg")
+![*Variable Correlation Plot*](ConfusionMatrix.jpg){width - 1500}
 The strong positive correlation factors for days with the percentages of the various cases of administered vaccines makes sense because the vaccine took time to create as well as time to test before being allowed to be administered to each age group. The vaccination variables all appear to have strong positive correlation which is self explanatory once it is realized that each category of vaccination is specifically order since you cannot have a complete set of vaccinations without also having single vaccination and you cannot have additional doses without also having the complete set of vaccinations. Distributed and Deaths also have a strong positive correlation which can be expected since the government would want to administer the most vaccines to the locations that are hit the hardest by the virus. A few of the remaining correlation factors have a weak positive correlation with each other because being administered a vaccination has a direct effect on the chances of someone contracting the virus and possibly being killed by it. Surprisingly, Location does not seem to have any correlation with any other variable, which I would have expected since each state is responsible for its own quarantine measures that they implement. It would have made sense because some states have been hit harder by the pandemic than others. 
 
 
@@ -320,7 +320,7 @@ results
 ```
 Considering that there are 46,153 observations in the data set as well as 56 possible locations that are being predicted, an accuracy rate of nearly 38% is not too terrible. Nonetheless, the model will not consistently prove to be a reliable method to predict the location based on the observations given.
 
-```{r eval=FALSE}
+```{r}
 tree_spec <- decision_tree() %>%
   set_engine("rpart")
 
@@ -332,7 +332,8 @@ class_tree_wf <- workflow() %>%
   add_recipe(States1_train_recipe)
 
 param_grid <-grid_regular(cost_complexity(range = c(-3, -1)), levels = 10)
-
+```
+```{r eval=FALSE}
 tune_res <- tune_grid(
   class_tree_wf, 
   resamples = States1_folds, 
@@ -344,6 +345,7 @@ tune_res <- tune_grid(
 tune_res <- autoplot(tune_res)
 ```
 ```{r}
+tune_res <- readRDS("tune_res")
 tune_res
 ```
 ```{r}
@@ -351,7 +353,7 @@ complexity1 <- readRDS("C:/Users/Dylan/Documents/PSTAT 231/Project/PSTAT_231_Fin
 best_complexity <- complexity1[1,]
 best_complexity
 
-class_tree_final <- finalize_orkflow(class_tree_wf, best_complexity)
+class_tree_final <- finalize_workflow(class_tree_wf, best_complexity)
 
 class_tree_final_fit <- fit(class_tree_final, data = States1_train)
 
@@ -372,7 +374,7 @@ augment(class_tree_final_fit, new_data = States2_test) %>%
 ```
 # Conclusion
 
-It looks like the decision tree is the best method to determine the location a single observation of data. With around a 61% rate of accuracy, the model is capable of determining which state or territory of the United States an observationaal point of data is from.
+It looks like the decision tree is the best method to determine the location a single observation of data. With around a 61% rate of accuracy, the model is capable of determining which state or territory of the United States an observational point of data is from.
 
 #Appendices
 
